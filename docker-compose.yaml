@@ -1,0 +1,22 @@
+name: tech-assesment-dm
+services:
+    db:
+        environment:
+            POSTGRES_DB: dm
+            POSTGRES_PASSWORD: dm
+            POSTGRES_USER: dm
+        image: postgres:15
+        networks:
+            default: null
+        ports:
+            - mode: ingress
+              target: 5432
+              published: "5432"
+              protocol: tcp
+        volumes:
+            - type: volume
+              source: data
+              target: /var/lib/postgresql/data
+              volume: {}
+volumes:
+    data: {}
