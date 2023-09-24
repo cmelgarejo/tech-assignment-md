@@ -1,22 +1,21 @@
 name: tech-assesment-dm
 services:
-    db:
-        environment:
-            POSTGRES_DB: dm
-            POSTGRES_PASSWORD: dm
-            POSTGRES_USER: dm
-        image: postgres:15
-        networks:
-            default: null
-        ports:
-            - mode: ingress
-              target: 5432
-              published: "5432"
-              protocol: tcp
-        volumes:
-            - type: volume
-              source: data
-              target: /var/lib/postgresql/data
-              volume: {}
+  db:
+    environment:
+      POSTGRES_DB: dm
+      POSTGRES_PASSWORD: dm
+      POSTGRES_USER: dm
+    image: postgres:15
+    restart: unless-stopped
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - mode: ingress
+        target: 5432
+        published: "5432"
+        protocol: tcp
+    networks:
+      default: null
 volumes:
-    data: {}
+  data: {}
