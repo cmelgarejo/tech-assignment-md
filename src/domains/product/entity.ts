@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, AfterLoad } from "typeorm";
 import { Status } from "./enums/status";
 import { Activity } from "../activity/entity";
+import { checkCircularDependencies } from "../../util";
 
 @Entity("products")
 export class Product {
@@ -22,13 +23,13 @@ export class Product {
 
   @AfterLoad()
   setProductStatus() {
-    console.log("setProductStatus, fire!", this.activities);
+    console.debug("setProductStatus, fire!");
     // Check if there is at least one activity
     if (!this.activities || this.activities?.length === 0) {
       this.status = Status.INVALID;
       return;
     }
-    console.log("not empty");
+    console.debug("not empty activities");
     // Filter activities with no output connections
     const finalActivities = this.activities.filter((activity) => !activity.outputs || activity.outputs.length === 0);
     // And if there is just one final activity
@@ -36,25 +37,12 @@ export class Product {
       this.status = Status.INVALID;
       return;
     }
-
-    // Check for circular dependencies (recursively) using a set to record visited activities
-    const visitedActivities = new Set<number>();
-    const checkCircularDependencies = (activity: Activity) => {
-      if (activity && activity.id !== undefined) {
-        if (visitedActivities.has(activity.id)) return true; // Circular dependency detected
-        visitedActivities.add(activity.id);
-        if (activity.outputs)
-          for (const connection of activity.outputs) if (checkCircularDependencies(connection.toActivity)) return true;
-        visitedActivities.delete(activity.id);
-        return false; // No circular dependency detected
-      }
-    };
-
+    console.debug("just 1 final activity, we good, now check if there's circular dependencies");
     if (checkCircularDependencies(finalActivities[0])) {
       this.status = Status.INVALID;
       return;
     }
-
+    console.debug("set clean, all unique values");
     this.status = Status.VALID;
   }
 }
