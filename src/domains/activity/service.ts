@@ -1,12 +1,12 @@
-import { Activity } from "./entity";
+import { Activity, ActivityConnection } from "./entity";
 import { AppDataSource } from "../../orm";
 
 export class ActivityService {
   private activityRepository = AppDataSource.getRepository(Activity);
+  private activityConnectionRepository = AppDataSource.getRepository(ActivityConnection);
 
   async createActivity(input: Activity): Promise<Activity> {
-    const newActivity = this.activityRepository.save(this.activityRepository.create(input as Activity));
-    return newActivity;
+    return this.activityRepository.save(this.activityRepository.create(input as Activity));
   }
 
   async getActivity(id: number): Promise<Activity> {
@@ -14,6 +14,28 @@ export class ActivityService {
   }
 
   async updateActivity(id: number, input: Activity): Promise<Activity> {
+    input.id = id;
+    if (input.inputs) {
+      input.inputs.forEach(async (acInput: ActivityConnection) => {
+        await this.activityConnectionRepository.save({
+          toActivity: { id: id },
+          fromActivity: { id: acInput.fromActivity.id },
+          value: acInput.value,
+        });
+      });
+      delete input.inputs;
+    }
+    if (input.outputs) {
+      input.outputs.forEach(async (acOutput: ActivityConnection) => {
+        console.log(acOutput);
+        await this.activityConnectionRepository.save({
+          fromActivity: { id: id },
+          toActivity: { id: acOutput.toActivity.id },
+          value: acOutput.value,
+        });
+      });
+      delete input.outputs;
+    }
     await this.activityRepository.update(id, input);
     return this.getActivity(id);
   }

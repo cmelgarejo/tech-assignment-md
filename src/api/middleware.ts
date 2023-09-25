@@ -25,6 +25,10 @@ export const errHandler = (err: Error, req: Request, res: Response, next: NextFu
   }
 
   // Set a default status code for the error response if it doesn't have one that makes sense
-  res.status(statusCode).json(err);
+  res.status(statusCode).json({
+    code: err.name,
+    message: err.message,
+    stack: process.env.NODE_ENV === "production" ? "🥞" : err.stack,
+  });
   next(err);
 };

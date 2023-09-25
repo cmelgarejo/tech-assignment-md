@@ -8,7 +8,7 @@ export default {
         .object({
           id: z.number().positive(),
         })
-        .required(),
+        .optional(),
       outputs: z
         .array(
           z.strictObject({

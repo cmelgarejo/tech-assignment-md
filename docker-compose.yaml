@@ -1,5 +1,36 @@
 name: tech-assesment-dm
 services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tech-assesment-dm
+    restart: unless-stopped
+    command: npm run dev
+    ports:
+      - mode: ingress
+        target: 3000
+        published: 8080
+        protocol: tcp
+    volumes:
+      - ./src:/app/src
+    networks:
+      - app-network
+    depends_on:
+      - db
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tech-assesment-dm
+    command: npm run test # test:watch to keep it running on changes
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    networks:
+      - app-network
+    depends_on:
+      - db
   db:
     environment:
       POSTGRES_DB: dm
@@ -13,9 +44,12 @@ services:
     ports:
       - mode: ingress
         target: 5432
-        published: "5432"
+        published: 7654
         protocol: tcp
     networks:
-      default: null
+      - app-network
 volumes:
   data: {}
+networks:
+  app-network:
+    driver: bridge

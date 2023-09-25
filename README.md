@@ -12,8 +12,27 @@ database. To run the project, you need to have docker and docker-compose
 installed.
 
 ```bash
-docker-compose up
+docker-compose up dev
 ```
+
+## Docker compose
+
+To run the project with docker-compose, you need to have docker and
+docker-compose installed.
+
+```bash
+docker-compose up dev
+```
+
+Also you can run tests with docker-compose:
+
+```bash
+docker-compose up test
+```
+
+## Running locally
+
+Make sure .env has all the values to run locally. You can copy the .env.example and modify accordingly
 
 ### Install dependencies
 
@@ -49,8 +68,7 @@ npm run test:watch
 
 ## TODO
 
--   Add more tests
--   Add Zod
+-   Add more tests!
 
 ## Overview
 

@@ -1,74 +1,114 @@
-import "reflect-metadata";
-import { z } from "zod";
-import { Product } from "../src/product/entity";
-import { Status } from "../src/product/enums/status";
-import { ProductService } from "../src/product/service";
+import "dotenv/config";
+import { agent } from "supertest";
+import { Product } from "../src/domains/product/entity";
+// import { ProductService } from "../src/domains/product/service";
+import { AppDataSource } from "../src/orm";
+import { Status } from "../src/domains/product/enums/status";
+import { ProductService } from "../src/domains/product/service";
+import app from "../src/app";
 
-const productService = new ProductService();
+beforeAll(async () => {
+  AppDataSource.setOptions({
+    database: "dm_test",
+  });
 
-const ProductSchema = z.object({
-  name: z.string(),
-  status: z.enum([Status.VALID, Status.INVALID]),
+  await AppDataSource.initialize();
 });
 
-// service mock
-// jest.mock("../src/product/service", () => {
-//   return {
-//     ProductService: jest.fn().mockImplementation(() => {
-//       return {
-//         createProduct: jest.fn().mockImplementation((product: Product) => {
-//           return Promise.resolve(product);
-//         }),
-//         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-//         getProduct: jest.fn().mockImplementation((id: number) => {
-//           return Promise.resolve(expected);
-//         }),
-//         updateProduct: jest.fn().mockImplementation((id: number, product: Product) => {
-//           return Promise.resolve(product);
-//         }),
-//         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-//         deleteProduct: jest.fn().mockImplementation((id: number) => {
-//           return Promise.resolve();
-//         }),
-//         getProducts: jest.fn().mockImplementation(() => {
-//           return Promise.resolve([expected]);
-//         }),
-//       };
-//     }),
-//   };
-// });
+afterAll(async () => {
+  await AppDataSource.destroy();
+});
 
-const expected: Product = { name: "Test Product", status: Status.INVALID } as Product;
+describe("Product Service", () => {
+  const productService = new ProductService();
+  const expected: Product = { name: "Test Product" } as Product;
+  let created: Product;
 
-describe("Product", () => {
   it("should create a product", async () => {
-    const product = await productService.createProduct(expected);
-    expect(ProductSchema.parse(product)).toHaveProperty("name");
-    expect(product.name).toBe("Test Product");
+    created = await productService.createProduct(expected);
+    expect(created.id).toBeGreaterThan(0);
+    expect(created.name).toEqual(expected.name);
   });
 
   it("should get a product", async () => {
-    const fetchedProduct = await productService.getProduct(expected.id ?? 0);
-    expect(ProductSchema.parse(fetchedProduct).name).toEqual(expected.name);
-    expect(ProductSchema.parse(fetchedProduct).status).toEqual(expected.status);
-    expect(fetchedProduct.name).toBe(expected.name);
+    const fetched = await productService.getProduct(expected.id);
+    expect(fetched.name).toEqual(expected.name);
+    expect(fetched.status).toEqual(Status.INVALID);
+    expect(fetched.name).toBe(expected.name);
   });
 
-  // it("should not update a product", async () => {
-  //   product.name = "Updated Product";
-  //   await expect(productService.updateProduct(product.id ?? 0, product)).rejects.toThrow();
-  // });
+  it("should update a product", async () => {
+    const updatedFields: Product = { name: "Updated Product" } as Product;
+    const fetched = await productService.getProduct(expected.id);
+    const result = await productService.updateProduct(fetched.id, updatedFields);
+    expect(result.name).not.toEqual(expected.name);
+    expect(result.name).toEqual(updatedFields.name);
+  });
 
-  // it("should delete a product", async () => {
-  //   await productService.deleteProduct(product.id);
-  //   await expect(productService.getProduct(product.id)).rejects.toThrow();
-  // });
+  it("should list products", async () => {
+    const list = await productService.getProducts();
+    expect(list).toBeInstanceOf(Array);
+    list.forEach((item) => {
+      expect(item).toHaveProperty("id");
+      expect(item).toHaveProperty("name");
+      expect(item).toHaveProperty("status");
+    });
+  });
 
-  // it("should list products", async () => {
-  //   const products = await productService.getProducts();
-  //   expect(products).toBeInstanceOf(Array);
-  //   products.forEach((product) => {
-  //     expect(ProductSchema.parse(product)).toHaveProperty("id");
-  //   });
-  // });
+  it("should create and delete a product", async () => {
+    const deleteMe: Product = { name: "Delete me Product" } as Product;
+    const result = await productService.createProduct(deleteMe);
+    await productService.deleteProduct(result.id);
+    await expect(productService.getProduct(deleteMe.id)).rejects.toThrow();
+  });
+
+  it("should delete the first product", async () => {
+    await productService.deleteProduct(created.id);
+    await expect(productService.getProduct(created.id)).rejects.toThrow();
+  });
+});
+
+describe("Product e2e", () => {
+  const expected: Product = { name: "Test Product" } as Product;
+  let created: Product;
+  it("should create a product", async () => {
+    const res = await agent(app).post("/products").send(expected);
+    expect(res.statusCode).toBe(201);
+    expect(res.body).toHaveProperty("id");
+    expect(res.body.name).toBe(expected.name);
+    created = res.body as Product;
+  });
+
+  it("should get a product", async () => {
+    const res = await agent(app).get(`/products/${created.id}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty("id");
+    expect(res.body.name).toBe(expected.name);
+  });
+
+  it("should update a product", async () => {
+    const updatedFields: Product = { name: "Updated Product" } as Product;
+    const res = await agent(app).put(`/products/${created.id}`).send(updatedFields);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty("id");
+    expect(res.body.name).toBe(updatedFields.name);
+  });
+
+  it("should list products", async () => {
+    const res = await agent(app).get(`/products`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBeInstanceOf(Array);
+    res.body.forEach((item: Product) => {
+      expect(item).toHaveProperty("id");
+      expect(item).toHaveProperty("name");
+      expect(item).toHaveProperty("status");
+    });
+  });
+
+  it("should delete a product", async () => {
+    const res = await agent(app).delete(`/products/${created.id}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty("message");
+    expect(res.body.message).toBe("Product deleted successfully!");
+  });
 });

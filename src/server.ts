@@ -1,11 +1,8 @@
-import { AppDataSource } from "./orm";
+import "dotenv/config";
 import app from "./app";
-import swaggerAutogen from "swagger-autogen";
+import { AppDataSource } from "./orm";
 
 const port = process.env.PORT || 3000;
-
-//Swagger autogen
-swaggerAutogen()("./swagger.json", ["./src/app.ts"]);
 
 AppDataSource.initialize()
   .then(async () => {

@@ -42,7 +42,7 @@ const Delete = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = validate.id.parse(req.params.id);
     await activityService.deleteActivity(id);
-    res.json({ message: "Activity deleted successfully." });
+    res.json({ message: "Activity deleted successfully!" });
   } catch (error) {
     next(error);
   }

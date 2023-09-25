@@ -4,12 +4,12 @@ import { Product } from "../product/entity";
 @Entity("activities")
 export class Activity {
   @PrimaryGeneratedColumn()
-  id?: number;
+  id: number;
 
   @Column()
   name: string;
 
-  @ManyToOne(() => Product, (product) => product.activities)
+  @ManyToOne(() => Product, (product) => product.activities, { nullable: false })
   @JoinColumn({ name: "product_id" })
   product: Product;
 

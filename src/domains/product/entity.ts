@@ -11,25 +11,21 @@ export class Product {
   @Column()
   name: string;
 
-  // @Column({
-  //   type: "enum",
-  //   enum: Status,
-  //   default: Status.INVALID,
-  // })
-  status: Status;
+  // "virtual"/calculated/derived field
+  status?: Status;
 
-  @OneToMany(() => Activity, (activity) => activity.product, { eager: true })
+  @OneToMany(() => Activity, (activity) => activity.product, { eager: true, onDelete: "CASCADE" })
   activities: Activity[];
 
   @AfterLoad()
   setProductStatus() {
-    console.debug("setProductStatus, fire!");
+    // console.debug("setProductStatus, fire!");
     // Check if there is at least one activity
     if (!this.activities || this.activities?.length === 0) {
       this.status = Status.INVALID;
       return;
     }
-    console.debug("not empty activities");
+    // console.debug("not empty activities");
     // Filter activities with no output connections
     const finalActivities = this.activities.filter((activity) => !activity.outputs || activity.outputs.length === 0);
     // And if there is just one final activity
@@ -37,12 +33,12 @@ export class Product {
       this.status = Status.INVALID;
       return;
     }
-    console.debug("just 1 final activity, we good, now check if there's circular dependencies");
+    // console.debug("just 1 final activity, we good, now check if there's circular dependencies");
     if (checkCircularDependencies(finalActivities[0])) {
       this.status = Status.INVALID;
       return;
     }
-    console.debug("set clean, all unique values");
+    // console.debug("set clean, all unique values");
     this.status = Status.VALID;
   }
 }

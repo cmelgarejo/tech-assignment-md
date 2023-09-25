@@ -10,7 +10,7 @@ const Create = async (req: Request, res: Response, next: NextFunction) => {
     const product: Product = req.body;
     validate.schema.parse(product);
     const newProduct = await productService.createProduct(product);
-    res.json(newProduct);
+    res.status(201).json(newProduct);
   } catch (error) {
     next(error);
   }
@@ -41,7 +41,7 @@ const Delete = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = validate.id.parse(req.params.id);
     await productService.deleteProduct(id);
-    res.json({ message: "Product deleted successfully." });
+    res.json({ message: "Product deleted successfully!" });
   } catch (error) {
     next(error);
   }
